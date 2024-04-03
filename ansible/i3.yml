@@ -1,0 +1,12 @@
+---
+- name: Install/Configure i3
+  become: true
+
+  tasks:
+    - name: Install xorg and xorg-xinit
+      community.general.pacman:
+        name: xorg
+        state: present
+      community.general.pacman:
+        name: xorg-xinit
+        state: present

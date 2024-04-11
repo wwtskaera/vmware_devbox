@@ -9,39 +9,37 @@ packer {
 }
 
 source "vmware-iso" "devbox" {
+  vmx_data = {
+    "virtualhw.version" = "17"
+  }
   iso_url = "assets/archlinux-2024.03.01-x86_64.iso"
   iso_checksum = "sha256:0062e39e57d492672712467fdb14371fca4e3a5c57fed06791be95da8d4a60e3"
-  vmx_data = {
-    "firmware" = "efi"
-  }
   boot_wait = "5s"
   boot_command = [
     "<enter><wait40s>",
     # 1.10 Format the partitions
     "fdisk /dev/sda<enter>",
-    "g<enter>",
-    "n<enter><enter><enter>",
-    "+1G<enter>",
-    "t<enter>1<enter>",
-    "n<enter><enter><enter>",
+    "o<enter>",
+    "n<enter>",
+    "e<enter><enter><enter>",
     "+4G<enter>",
-    "t<enter><enter>19<enter>",
-    "n<enter><enter><enter>",
+    "t<enter>swap<enter>",
+    "n<enter><enter><enter><enter>",
     "<enter>",
-    "t<enter><enter>23<enter>",
+    "t<enter><enter>linux<enter>",
     "w<enter>",
-    "mkfs.ext4 /dev/sda3<enter>",
-    "mkswap /dev/sda2<enter>",
-    "mkfs.fat -F 32 /dev/sda1<enter>",
+    "mkfs.ext4 /dev/sda2<enter>",
+    "mkswap /dev/sda1<enter>",
     # 1.11 Mount the Filesystem
-    "mount /dev/sda3 /mnt<enter>",
-    "mount --mkdir /dev/sda1 /mnt/boot<enter>",
-    "swapon /dev/sda2<enter>",
+    "mount /dev/sda2 /mnt<enter>",
+    "swapon /dev/sda1<enter>",
     # 2 Installation
     ## 2.1 Select the mirrors
     #"curl -s \"https://archlinux.org/mirrorlist/?country=US&protocol=http&protocol=https&ip_version=4&use_mirror_status=on\" | sed -e '/Server/s/^#*//g' > /etc/pacman.d/mirrorlist<enter><wait5>",
+    "echo \"Server = https://mirrors.rit.edu/archlinux/\\$repo/os/\\$arch\" > /etc/pacman.d/mirrorlist<enter>",
+    "cat /etc/pacman.d/mirrorlist<enter><wait30s>",
     ## 2.2 Install essential packages
-    "pacstrap -K /mnt base base-devel linux linux-firmware dhcpcd sudo git openssh vim<enter><wait3m30s>",
+    "pacstrap -K /mnt base base-devel linux linux-firmware dhcpcd sudo git openssh vim<enter><wait5m>",
     # 3 Configure the system
     ## 3.1 Fstab
     "genfstab -U /mnt >> /mnt/etc/fstab<enter>",
@@ -60,8 +58,8 @@ source "vmware-iso" "devbox" {
     ## 3.7 Root password
     "echo -e 'root\\nroot' | passwd<enter>",
     ## 3.8 Bootloader Install
-    "pacman -S grub efibootmgr --noconfirm<enter><wait10>",
-    "grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB<enter>",
+    "pacman -S grub --noconfirm<enter><wait10>",
+    "grub-install --target=i386-pc /dev/sda<enter>",
     "grub-mkconfig -o /boot/grub/grub.cfg<enter>",
     # adduser and enable ssh
     "exit<enter>",
@@ -73,12 +71,13 @@ source "vmware-iso" "devbox" {
     # 4 Reboot(exit chroot)
     #"reboot<enter>"
   ]
+  vm_name = "archbase"
   cpus = 2
   memory = 4096
   disk_size = 20480
   ssh_username = "packer"
   ssh_password= "packer"
-  shutdown_command = "systemctl poweroff -i"
+  shutdown_command = "sudo systemctl poweroff -i"
 }
 
 build {
